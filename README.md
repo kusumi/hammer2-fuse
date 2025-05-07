@@ -1,4 +1,4 @@
-hammer2-fuse ([v0.4.0](https://github.com/kusumi/hammer2-fuse/releases/tag/v0.4.0))
+hammer2-fuse ([v0.4.1](https://github.com/kusumi/hammer2-fuse/releases/tag/v0.4.1))
 ========
 
 ## About

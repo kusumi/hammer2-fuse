@@ -1,6 +1,6 @@
 [package]
 name = "hammer2-fuse"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 
 [dependencies]
@@ -9,10 +9,13 @@ env_logger = "0.11.7"
 fuser = { version = "0.15.1", features = ["abi-7-18"] }
 getopts = "0.2.21"
 home = "0.5.11"
-lazy_static = "1.5.0"
 libc = "0.2.171"
+libfs = { git = "https://github.com/kusumi/libfs" }
 libhammer2 = { git = "https://github.com/kusumi/libhammer2" }
 log = "0.4.26"
 nix = "0.29.0"
 simplelog = "0.12.2"
 syslog = "7.0.0"
+
+[features]
+bitmap_u64 = ["libfs/bitmap_u64"]

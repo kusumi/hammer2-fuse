@@ -40,7 +40,7 @@ fn stat2attr(st: &libhammer2::hammer2::Stat) -> fuser::FileAttr {
 fn h2i(e: libhammer2::Error) -> i32 {
     (match e {
         libhammer2::Error::Errno(e) => e,
-        libhammer2::Error::Error(e) => match crate::util::error2errno(&e) {
+        libhammer2::Error::Error(e) => match libfs::os::error2errno(&e) {
             Some(v) => v,
             None => nix::errno::Errno::EINVAL,
         },
@@ -335,42 +335,46 @@ impl fuser::Filesystem for crate::Hammer2Fuse {
         match u64::from(cmd) {
             libhammer2::ioctl::CMD_VERSION_GET => reply.ioctl(
                 0,
-                libhammer2::util::any_as_u8_slice(
-                    &self.ioctl_version_get(libhammer2::util::align_to(in_data)),
-                ),
+                libfs::cast::as_u8_slice(&self.ioctl_version_get(libfs::cast::align_to(in_data))),
             ),
             libhammer2::ioctl::CMD_PFS_GET => {
-                match self.ioctl_pfs_get(libhammer2::util::align_to(in_data)) {
-                    Ok(v) => reply.ioctl(0, libhammer2::util::any_as_u8_slice(&v)),
+                match self.ioctl_pfs_get(libfs::cast::align_to(in_data)) {
+                    Ok(v) => reply.ioctl(0, libfs::cast::as_u8_slice(&v)),
                     Err(e) => reply.error(h2i(e)),
                 }
             }
             libhammer2::ioctl::CMD_PFS_LOOKUP => {
-                match self.ioctl_pfs_lookup(libhammer2::util::align_to(in_data)) {
-                    Ok(v) => reply.ioctl(0, libhammer2::util::any_as_u8_slice(&v)),
+                match self.ioctl_pfs_lookup(libfs::cast::align_to(in_data)) {
+                    Ok(v) => reply.ioctl(0, libfs::cast::as_u8_slice(&v)),
                     Err(e) => reply.error(h2i(e)),
                 }
             }
             libhammer2::ioctl::CMD_INODE_GET => {
-                match self.ioctl_inode_get(inum, libhammer2::util::align_to(in_data)) {
-                    Ok(v) => reply.ioctl(0, libhammer2::util::any_as_u8_slice(&v)),
+                match self.ioctl_inode_get(inum, libfs::cast::align_to(in_data)) {
+                    Ok(v) => reply.ioctl(0, libfs::cast::as_u8_slice(&v)),
                     Err(e) => reply.error(e as i32),
                 }
             }
             libhammer2::ioctl::CMD_DEBUG_DUMP => match self.ioctl_debug_dump(inum) {
                 Ok(()) => reply.ioctl(0, &[]),
-                Err(e) => reply.error(e as i32),
+                Err(e) => reply.error(h2i(e)),
             },
             libhammer2::ioctl::CMD_VOLUME_LIST => {
-                match self.ioctl_volume_list(libhammer2::util::align_to(in_data)) {
-                    Ok(v) => reply.ioctl(0, libhammer2::util::any_as_u8_slice(&v)),
+                match self.ioctl_volume_list(libfs::cast::align_to(in_data)) {
+                    Ok(v) => reply.ioctl(0, libfs::cast::as_u8_slice(&v)),
                     Err(e) => reply.error(e as i32),
                 }
             }
             libhammer2::ioctl::CMD_VOLUME_LIST2 => {
-                match self.ioctl_volume_list2(libhammer2::util::align_to(in_data)) {
-                    Ok(v) => reply.ioctl(0, libhammer2::util::any_as_u8_slice(&v)),
+                match self.ioctl_volume_list2(libfs::cast::align_to(in_data)) {
+                    Ok(v) => reply.ioctl(0, libfs::cast::as_u8_slice(&v)),
                     Err(e) => reply.error(e as i32),
+                }
+            }
+            libhammer2::ioctl::CMD_CIDPRUNE => {
+                match self.ioctl_cidprune(libfs::cast::align_to(in_data)) {
+                    Ok(v) => reply.ioctl(0, libfs::cast::as_u8_slice(&v)),
+                    Err(e) => reply.error(h2i(e)),
                 }
             }
             libhammer2::ioctl::CMD_PFS_CREATE

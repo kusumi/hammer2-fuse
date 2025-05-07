@@ -1,3 +1,9 @@
+v0.4.1
+======
+- Add ioctl(IOC_CIDPRUNE)
+- Use libfs
+- Misc updates
+
 v0.4.0
 ======
 - Initial release

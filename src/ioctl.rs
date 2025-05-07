@@ -42,8 +42,7 @@ impl crate::Hammer2Fuse {
         if cid == libhammer2::chain::CID_NONE {
             return Err(nix::errno::Errno::ENOENT.into());
         }
-        let data = self.get_chain(cid)?.get_data();
-        let ipdata = libhammer2::ondisk::media_as_inode_data(data);
+        let ipdata = self.get_chain(cid)?.as_inode_data();
         let mut ioc = *ioc;
         ioc.name_key = ipdata.meta.name_key;
         ioc.pfs_type = ipdata.meta.pfs_type;
@@ -95,8 +94,7 @@ impl crate::Hammer2Fuse {
         if cid == libhammer2::chain::CID_NONE {
             return Err(nix::errno::Errno::ENOENT.into());
         }
-        let data = self.get_chain(cid)?.get_data();
-        let ipdata = libhammer2::ondisk::media_as_inode_data(data);
+        let ipdata = self.get_chain(cid)?.as_inode_data();
         let mut ioc = *ioc;
         ioc.name_key = ipdata.meta.name_key;
         ioc.pfs_type = ipdata.meta.pfs_type;
@@ -123,13 +121,13 @@ impl crate::Hammer2Fuse {
         Ok(ioc)
     }
 
-    pub(crate) fn ioctl_debug_dump(&self, inum: u64) -> nix::Result<()> {
+    pub(crate) fn ioctl_debug_dump(&self, inum: u64) -> libhammer2::Result<()> {
         let Some(ip) = self.pmp.get_inode(inum) else {
-            return Err(nix::errno::Errno::ENOENT);
+            return Err(nix::errno::Errno::ENOENT.into());
         };
         if self.daemonized {
             log::error!("daemonized");
-            Err(nix::errno::Errno::EOPNOTSUPP)
+            Err(nix::errno::Errno::EOPNOTSUPP.into())
         } else {
             self.pmp.dump_inode_chain(ip)
         }
@@ -169,6 +167,28 @@ impl crate::Hammer2Fuse {
         ioc.version = self.pmp.get_volume_data().version;
         ioc.copy_pfs_name(self.pmp.get_label().as_bytes());
         Ok(ioc)
+    }
+
+    pub(crate) fn ioctl_cidprune(
+        &mut self,
+        ioc: &libhammer2::ioctl::IocCidPrune,
+    ) -> libhammer2::Result<libhammer2::ioctl::IocCidPrune> {
+        assert!(self.total_open > 0); // fd for this nid
+        let x = self.total_open - 1;
+        if x > 0 {
+            log::error!("{x} pending open file");
+            return Err(nix::errno::Errno::EBUSY.into());
+        }
+        match self.pmp.prune_chain() {
+            Ok(t) => {
+                // file data may be cached by FOPEN_KEEP_CACHE if zero
+                let mut ioc = *ioc;
+                ioc.vchain_total = t.0.try_into().unwrap();
+                ioc.fchain_total = t.1.try_into().unwrap();
+                Ok(ioc)
+            }
+            Err(e) => Err(e),
+        }
     }
 
     fn get_chain(&self, cid: libhammer2::chain::Cid) -> nix::Result<&libhammer2::chain::Chain> {
