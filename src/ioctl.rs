@@ -81,7 +81,7 @@ impl crate::Hammer2Fuse {
             self.pmp
                 .lookup_chain(pcid, lhc, lhc + libhammer2::fs::HAMMER2_DIRHASH_LOMASK, 0)?;
         while cid != libhammer2::chain::CID_NONE {
-            if self.get_chain(cid)?.match_name_from_bytes(&ioc.get_name()?) {
+            if self.get_chain(cid)?.match_name_from_bytes(ioc.get_name()?) {
                 break;
             }
             (pcid, cid, _) = self.pmp.get_next_chain(
@@ -133,6 +133,7 @@ impl crate::Hammer2Fuse {
         }
     }
 
+    #[allow(clippy::unused_self)]
     pub(crate) fn ioctl_volume_list(
         &self,
         ioc: &libhammer2::ioctl::IocVolumeList,
@@ -173,7 +174,7 @@ impl crate::Hammer2Fuse {
         &mut self,
         ioc: &libhammer2::ioctl::IocCidPrune,
     ) -> libhammer2::Result<libhammer2::ioctl::IocCidPrune> {
-        assert!(self.total_open > 0); // fd for this nid
+        assert!(self.total_open > 0); // fd for this cid
         let x = self.total_open - 1;
         if x > 0 {
             log::error!("{x} pending open file");

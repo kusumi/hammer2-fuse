@@ -74,7 +74,7 @@ impl fuser::Filesystem for crate::Hammer2Fuse {
         reply: fuser::ReplyEntry,
     ) {
         debug_req!(req, self.debug > 1);
-        log::debug!("dinum {dinum} name {name:?}");
+        log::debug!("dinum {dinum} name {}", name.display());
         let _mtx = mtx_lock!(MTX);
         let Some(name) = name.to_str() else {
             reply.error(libc::EINVAL);

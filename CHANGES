@@ -1,3 +1,7 @@
+v0.4.2
+======
+- Misc updates
+
 v0.4.1
 ======
 - Add ioctl(IOC_CIDPRUNE)
