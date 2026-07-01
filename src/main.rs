@@ -99,8 +99,18 @@ fn usage(prog: &str, gopt: &getopts::Options) {
     );
 }
 
-#[allow(clippy::too_many_lines)]
 fn main() {
+    if let Err(e) = main_impl() {
+        if libfs::is_debug_set() {
+            panic!("{e}");
+        } else {
+            std::process::exit(1);
+        }
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn main_impl() -> Result<()> {
     println!(
         "FUSE hammer2 {}.{}.{} (fuser)",
         libhammer2::VERSION[0],
@@ -148,21 +158,21 @@ fn main() {
         Err(e) => {
             eprintln!("{e}");
             usage(prog, &gopt);
-            std::process::exit(1);
+            return Err(Box::new(e));
         }
     };
     if matches.opt_present("V") {
-        std::process::exit(0);
+        return Ok(());
     }
     if matches.opt_present("help") {
         usage(prog, &gopt);
-        std::process::exit(0);
+        return Ok(());
     }
 
     let args = &matches.free;
     if args.len() != 2 {
         usage(prog, &gopt);
-        std::process::exit(1);
+        return Err(Box::new(nix::errno::Errno::EINVAL));
     }
     let spec = &args[0];
     let mntpt = &args[1];
@@ -209,12 +219,12 @@ fn main() {
     if !use_daemon {
         if let Err(e) = init_std_logger() {
             eprintln!("{e}");
-            std::process::exit(1);
+            return Err(Box::new(e));
         }
-    } else if init_file_logger(prog).is_err() {
-        if let Err(e) = init_syslog_logger(prog) {
-            eprintln!("syslog logger: {e}");
-        }
+    } else if init_file_logger(prog).is_err()
+        && let Err(e) = init_syslog_logger(prog)
+    {
+        eprintln!("syslog logger: {e}");
     }
 
     let pmp = match libhammer2::mount(spec, &mopt) {
@@ -224,7 +234,7 @@ fn main() {
             if use_daemon {
                 eprintln!("{e}");
             }
-            std::process::exit(1);
+            return Err(Box::new(e));
         }
     };
     fopt.push(fuser::MountOption::RO);
@@ -235,7 +245,7 @@ fn main() {
         if let Err(e) = daemonize::Daemonize::new().start() {
             log::error!("{e}");
             eprintln!("{e}");
-            std::process::exit(1);
+            return Err(Box::new(e));
         }
     }
     // fuser::mount2 doesn't return, hence after daemonize
@@ -246,6 +256,8 @@ fn main() {
         &fopt,
     ) {
         log::error!("{e}");
-        std::process::exit(1);
+        return Err(Box::new(e));
     }
+
+    Ok(())
 }

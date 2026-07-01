@@ -1,3 +1,8 @@
+v0.5.0
+======
+- Change Rust edition to 2024
+- Misc updates
+
 v0.4.2
 ======
 - Misc updates

@@ -1,3 +1,5 @@
+use libhammer2::ErrorExt;
+
 impl crate::Hammer2Fuse {
     pub(crate) fn ioctl_version_get(
         &self,
@@ -112,7 +114,7 @@ impl crate::Hammer2Fuse {
         let Some(ip) = self.pmp.get_inode(inum) else {
             return Err(nix::errno::Errno::ENOENT);
         };
-        let stats = self.pmp.get_inode_embed_stats(inum);
+        let stats = self.pmp.get_inode_embed_stats(inum)?;
         let mut ioc = *ioc;
         ioc.data_count = stats.data_count;
         ioc.inode_count = stats.inode_count;
@@ -154,11 +156,11 @@ impl crate::Hammer2Fuse {
         let mut ioc = *ioc;
         let mut nvolumes = 0;
         for (i, vol) in self.pmp.get_volumes().iter().enumerate() {
-            if i >= ioc.nvolumes.try_into().unwrap() {
+            if i >= ioc.nvolumes.try_into().or_nix_range()? {
                 break;
             }
             let entry = &mut ioc.volumes[i];
-            entry.id = vol.get_id().try_into().unwrap();
+            entry.id = vol.get_id().try_into().or_nix_range()?;
             entry.copy_path(vol.get_path().as_bytes());
             entry.offset = vol.get_offset();
             entry.size = vol.get_size();
@@ -184,8 +186,8 @@ impl crate::Hammer2Fuse {
             Ok(t) => {
                 // file data may be cached by FOPEN_KEEP_CACHE if zero
                 let mut ioc = *ioc;
-                ioc.vchain_total = t.0.try_into().unwrap();
-                ioc.fchain_total = t.1.try_into().unwrap();
+                ioc.vchain_total = t.0.try_into().or_nix_range()?;
+                ioc.fchain_total = t.1.try_into().or_nix_range()?;
                 Ok(ioc)
             }
             Err(e) => Err(e),

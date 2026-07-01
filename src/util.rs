@@ -1,14 +1,16 @@
-pub(crate) fn get_home_path() -> crate::Result<String> {
-    Ok(home::home_dir()
+use libhammer2::ErrorExt;
+
+pub(crate) fn get_home_path() -> nix::Result<String> {
+    home::home_dir()
         .ok_or(nix::errno::Errno::ENOENT)?
         .into_os_string()
         .into_string()
-        .unwrap())
+        .map_err(|_| nix::errno::Errno::EINVAL)
 }
 
-pub(crate) fn stat2attr(st: &libhammer2::hammer2::Stat) -> fuser::FileAttr {
+pub(crate) fn stat2attr(st: &libhammer2::hammer2::Stat) -> nix::Result<fuser::FileAttr> {
     let mtime = libfs::time::unix2system(st.st_mtime);
-    fuser::FileAttr {
+    Ok(fuser::FileAttr {
         ino: st.st_ino,
         size: st.st_size,
         blocks: st.st_blocks,
@@ -17,14 +19,14 @@ pub(crate) fn stat2attr(st: &libhammer2::hammer2::Stat) -> fuser::FileAttr {
         ctime: mtime,
         crtime: mtime,
         kind: mode2kind(st.st_mode),
-        perm: (st.st_mode & 0o777).try_into().unwrap(),
+        perm: (st.st_mode & 0o777).try_into().or_nix_range()?,
         nlink: st.st_nlink,
         uid: st.st_uid,
         gid: st.st_gid,
         rdev: st.st_rdev,
         blksize: st.st_blksize,
         flags: 0,
-    }
+    })
 }
 
 pub(crate) fn mode2kind(mode: libhammer2::hammer2::StatMode) -> fuser::FileType {
